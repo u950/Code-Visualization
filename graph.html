@@ -1,0 +1,900 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 750px;
+                 background-color: black;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 750px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="template.js">template.js</option>
+                                
+                                    <option value="webpack.config.client.js">webpack.config.client.js</option>
+                                
+                                    <option value="path">path</option>
+                                
+                                    <option value="webpack">webpack</option>
+                                
+                                    <option value="webpack.config.client.production.js">webpack.config.client.production.js</option>
+                                
+                                    <option value="webpack.config.server.js">webpack.config.server.js</option>
+                                
+                                    <option value="webpack-node-externals">webpack-node-externals</option>
+                                
+                                    <option value="App.js">App.js</option>
+                                
+                                    <option value="MainRouter">MainRouter</option>
+                                
+                                    <option value="theme">theme</option>
+                                
+                                    <option value="react">react</option>
+                                
+                                    <option value="main.js">main.js</option>
+                                
+                                    <option value="App">App</option>
+                                
+                                    <option value="MainRouter.js">MainRouter.js</option>
+                                
+                                    <option value="Product">Product</option>
+                                
+                                    <option value="Profile">Profile</option>
+                                
+                                    <option value="NewProduct">NewProduct</option>
+                                
+                                    <option value="OpenAuctions">OpenAuctions</option>
+                                
+                                    <option value="NewShop">NewShop</option>
+                                
+                                    <option value="Order">Order</option>
+                                
+                                    <option value="Signup">Signup</option>
+                                
+                                    <option value="NewAuction">NewAuction</option>
+                                
+                                    <option value="Signin">Signin</option>
+                                
+                                    <option value="Cart">Cart</option>
+                                
+                                    <option value="MyAuctions">MyAuctions</option>
+                                
+                                    <option value="Home">Home</option>
+                                
+                                    <option value="Users">Users</option>
+                                
+                                    <option value="EditShop">EditShop</option>
+                                
+                                    <option value="StripeConnect">StripeConnect</option>
+                                
+                                    <option value="EditProfile">EditProfile</option>
+                                
+                                    <option value="ShopOrders">ShopOrders</option>
+                                
+                                    <option value="Auction">Auction</option>
+                                
+                                    <option value="MyShops">MyShops</option>
+                                
+                                    <option value="PrivateRoute">PrivateRoute</option>
+                                
+                                    <option value="Shop">Shop</option>
+                                
+                                    <option value="Shops">Shops</option>
+                                
+                                    <option value="Menu">Menu</option>
+                                
+                                    <option value="EditAuction">EditAuction</option>
+                                
+                                    <option value="EditProduct">EditProduct</option>
+                                
+                                    <option value="theme.js">theme.js</option>
+                                
+                                    <option value="api-auction.js">api-auction.js</option>
+                                
+                                    <option value="Bidding.js">Bidding.js</option>
+                                
+                                    <option value="TextField">TextField</option>
+                                
+                                    <option value="socket">socket</option>
+                                
+                                    <option value="Grid">Grid</option>
+                                
+                                    <option value="auth-helper">auth-helper</option>
+                                
+                                    <option value="Button">Button</option>
+                                
+                                    <option value="Typography">Typography</option>
+                                
+                                    <option value="DeleteAuction.js">DeleteAuction.js</option>
+                                
+                                    <option value="DialogContentText">DialogContentText</option>
+                                
+                                    <option value="DialogActions">DialogActions</option>
+                                
+                                    <option value="DialogTitle">DialogTitle</option>
+                                
+                                    <option value="Delete">Delete</option>
+                                
+                                    <option value="prop-types">prop-types</option>
+                                
+                                    <option value="DialogContent">DialogContent</option>
+                                
+                                    <option value="Dialog">Dialog</option>
+                                
+                                    <option value="IconButton">IconButton</option>
+                                
+                                    <option value="EditAuction.js">EditAuction.js</option>
+                                
+                                    <option value="Icon">Icon</option>
+                                
+                                    <option value="CardActions">CardActions</option>
+                                
+                                    <option value="Card">Card</option>
+                                
+                                    <option value="CardContent">CardContent</option>
+                                
+                                    <option value="Avatar">Avatar</option>
+                                
+                                    <option value="AddPhotoAlternate">AddPhotoAlternate</option>
+                                
+                                    <option value="MyAuctions.js">MyAuctions.js</option>
+                                
+                                    <option value="Paper">Paper</option>
+                                
+                                    <option value="Auctions">Auctions</option>
+                                
+                                    <option value="NewAuction.js">NewAuction.js</option>
+                                
+                                    <option value="OpenAuctions.js">OpenAuctions.js</option>
+                                
+                                    <option value="Timer.js">Timer.js</option>
+                                
+                                    <option value="api-auth.js">api-auth.js</option>
+                                
+                                    <option value="auth-helper.js">auth-helper.js</option>
+                                
+                                    <option value="PrivateRoute.js">PrivateRoute.js</option>
+                                
+                                    <option value="Signin.js">Signin.js</option>
+                                
+                                    <option value="AddToCart.js">AddToCart.js</option>
+                                
+                                    <option value="RemoveShoppingCart">RemoveShoppingCart</option>
+                                
+                                    <option value="AddShoppingCart">AddShoppingCart</option>
+                                
+                                    <option value="cart-helper">cart-helper</option>
+                                
+                                    <option value="cart-helper.js">cart-helper.js</option>
+                                
+                                    <option value="Cart.js">Cart.js</option>
+                                
+                                    <option value="config">config</option>
+                                
+                                    <option value="CartItems">CartItems</option>
+                                
+                                    <option value="Checkout">Checkout</option>
+                                
+                                    <option value="CartItems.js">CartItems.js</option>
+                                
+                                    <option value="Divider">Divider</option>
+                                
+                                    <option value="CardMedia">CardMedia</option>
+                                
+                                    <option value="Checkout.js">Checkout.js</option>
+                                
+                                    <option value="PlaceOrder">PlaceOrder</option>
+                                
+                                    <option value="PlaceOrder.js">PlaceOrder.js</option>
+                                
+                                    <option value="Home.js">Home.js</option>
+                                
+                                    <option value="Categories">Categories</option>
+                                
+                                    <option value="Search">Search</option>
+                                
+                                    <option value="Suggestions">Suggestions</option>
+                                
+                                    <option value="api-order.js">api-order.js</option>
+                                
+                                    <option value="MyOrders.js">MyOrders.js</option>
+                                
+                                    <option value="ListItemText">ListItemText</option>
+                                
+                                    <option value="List">List</option>
+                                
+                                    <option value="ListItem">ListItem</option>
+                                
+                                    <option value="Order.js">Order.js</option>
+                                
+                                    <option value="ProductOrderEdit.js">ProductOrderEdit.js</option>
+                                
+                                    <option value="MenuItem">MenuItem</option>
+                                
+                                    <option value="ShopOrders.js">ShopOrders.js</option>
+                                
+                                    <option value="Collapse">Collapse</option>
+                                
+                                    <option value="ProductOrderEdit">ProductOrderEdit</option>
+                                
+                                    <option value="ExpandLess">ExpandLess</option>
+                                
+                                    <option value="ExpandMore">ExpandMore</option>
+                                
+                                    <option value="api-product.js">api-product.js</option>
+                                
+                                    <option value="query-string">query-string</option>
+                                
+                                    <option value="Categories.js">Categories.js</option>
+                                
+                                    <option value="GridListTile">GridListTile</option>
+                                
+                                    <option value="GridList">GridList</option>
+                                
+                                    <option value="Products">Products</option>
+                                
+                                    <option value="DeleteProduct.js">DeleteProduct.js</option>
+                                
+                                    <option value="EditProduct.js">EditProduct.js</option>
+                                
+                                    <option value="MyProducts.js">MyProducts.js</option>
+                                
+                                    <option value="Edit">Edit</option>
+                                
+                                    <option value="DeleteProduct">DeleteProduct</option>
+                                
+                                    <option value="ListItemSecondaryAction">ListItemSecondaryAction</option>
+                                
+                                    <option value="NewProduct.js">NewProduct.js</option>
+                                
+                                    <option value="Product.js">Product.js</option>
+                                
+                                    <option value="AddToCart">AddToCart</option>
+                                
+                                    <option value="CardHeader">CardHeader</option>
+                                
+                                    <option value="Products.js">Products.js</option>
+                                
+                                    <option value="GridListTileBar">GridListTileBar</option>
+                                
+                                    <option value="Search.js">Search.js</option>
+                                
+                                    <option value="Suggestions.js">Suggestions.js</option>
+                                
+                                    <option value="Visibility">Visibility</option>
+                                
+                                    <option value="api-shop.js">api-shop.js</option>
+                                
+                                    <option value="DeleteShop.js">DeleteShop.js</option>
+                                
+                                    <option value="EditShop.js">EditShop.js</option>
+                                
+                                    <option value="MyProducts">MyProducts</option>
+                                
+                                    <option value="MyShops.js">MyShops.js</option>
+                                
+                                    <option value="DeleteShop">DeleteShop</option>
+                                
+                                    <option value="ListItemAvatar">ListItemAvatar</option>
+                                
+                                    <option value="NewShop.js">NewShop.js</option>
+                                
+                                    <option value="Shop.js">Shop.js</option>
+                                
+                                    <option value="Shops.js">Shops.js</option>
+                                
+                                    <option value="api-user.js">api-user.js</option>
+                                
+                                    <option value="DeleteUser.js">DeleteUser.js</option>
+                                
+                                    <option value="EditProfile.js">EditProfile.js</option>
+                                
+                                    <option value="FormControlLabel">FormControlLabel</option>
+                                
+                                    <option value="Switch">Switch</option>
+                                
+                                    <option value="Profile.js">Profile.js</option>
+                                
+                                    <option value="Person">Person</option>
+                                
+                                    <option value="DeleteUser">DeleteUser</option>
+                                
+                                    <option value="MyOrders">MyOrders</option>
+                                
+                                    <option value="stripeButton">stripeButton</option>
+                                
+                                    <option value="Signup.js">Signup.js</option>
+                                
+                                    <option value="StripeConnect.js">StripeConnect.js</option>
+                                
+                                    <option value="Users.js">Users.js</option>
+                                
+                                    <option value="ArrowForward">ArrowForward</option>
+                                
+                                    <option value="config.js">config.js</option>
+                                
+                                    <option value="devBundle.js">devBundle.js</option>
+                                
+                                    <option value="webpack-hot-middleware">webpack-hot-middleware</option>
+                                
+                                    <option value="webpack-dev-middleware">webpack-dev-middleware</option>
+                                
+                                    <option value="webpack.config.client">webpack.config.client</option>
+                                
+                                    <option value="express.js">express.js</option>
+                                
+                                    <option value="user">user</option>
+                                
+                                    <option value="server">server</option>
+                                
+                                    <option value="template">template</option>
+                                
+                                    <option value="express">express</option>
+                                
+                                    <option value="cors">cors</option>
+                                
+                                    <option value="product">product</option>
+                                
+                                    <option value="devBundle">devBundle</option>
+                                
+                                    <option value="auction">auction</option>
+                                
+                                    <option value="shop">shop</option>
+                                
+                                    <option value="auth">auth</option>
+                                
+                                    <option value="body-parser">body-parser</option>
+                                
+                                    <option value="order">order</option>
+                                
+                                    <option value="helmet">helmet</option>
+                                
+                                    <option value="cookie-parser">cookie-parser</option>
+                                
+                                    <option value="compression">compression</option>
+                                
+                                    <option value="server.js">server.js</option>
+                                
+                                    <option value="bidding">bidding</option>
+                                
+                                    <option value="mongoose">mongoose</option>
+                                
+                                    <option value="auction.controller.js">auction.controller.js</option>
+                                
+                                    <option value="formidable">formidable</option>
+                                
+                                    <option value="dbErrorHandler">dbErrorHandler</option>
+                                
+                                    <option value="fs">fs</option>
+                                
+                                    <option value="default">default</option>
+                                
+                                    <option value="extend">extend</option>
+                                
+                                    <option value="auth.controller.js">auth.controller.js</option>
+                                
+                                    <option value="jsonwebtoken">jsonwebtoken</option>
+                                
+                                    <option value="express-jwt">express-jwt</option>
+                                
+                                    <option value="bidding.controller.js">bidding.controller.js</option>
+                                
+                                    <option value="order.controller.js">order.controller.js</option>
+                                
+                                    <option value="product.controller.js">product.controller.js</option>
+                                
+                                    <option value="shop.controller.js">shop.controller.js</option>
+                                
+                                    <option value="user.controller.js">user.controller.js</option>
+                                
+                                    <option value="stripe">stripe</option>
+                                
+                                    <option value="request">request</option>
+                                
+                                    <option value="dbErrorHandler.js">dbErrorHandler.js</option>
+                                
+                                    <option value="auction.model.js">auction.model.js</option>
+                                
+                                    <option value="order.model.js">order.model.js</option>
+                                
+                                    <option value="product.model.js">product.model.js</option>
+                                
+                                    <option value="shop.model.js">shop.model.js</option>
+                                
+                                    <option value="user.model.js">user.model.js</option>
+                                
+                                    <option value="crypto">crypto</option>
+                                
+                                    <option value="auction.routes.js">auction.routes.js</option>
+                                
+                                    <option value="auth.routes.js">auth.routes.js</option>
+                                
+                                    <option value="order.routes.js">order.routes.js</option>
+                                
+                                    <option value="product.routes.js">product.routes.js</option>
+                                
+                                    <option value="shop.routes.js">shop.routes.js</option>
+                                
+                                    <option value="user.routes.js">user.routes.js</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "template.js", "label": "template.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\template.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "webpack.config.client.js", "label": "webpack.config.client.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\webpack.config.client.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "path", "label": "path", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "webpack", "label": "webpack", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "webpack.config.client.production.js", "label": "webpack.config.client.production.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\webpack.config.client.production.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "webpack.config.server.js", "label": "webpack.config.server.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\webpack.config.server.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "webpack-node-externals", "label": "webpack-node-externals", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "App.js", "label": "App.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\App.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "MainRouter", "label": "MainRouter", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "theme", "label": "theme", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "react", "label": "react", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "main.js", "label": "main.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\main.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "App", "label": "App", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MainRouter.js", "label": "MainRouter.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\MainRouter.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Product", "label": "Product", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Profile", "label": "Profile", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "NewProduct", "label": "NewProduct", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "OpenAuctions", "label": "OpenAuctions", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "NewShop", "label": "NewShop", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Order", "label": "Order", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Signup", "label": "Signup", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "NewAuction", "label": "NewAuction", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Signin", "label": "Signin", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Cart", "label": "Cart", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "MyAuctions", "label": "MyAuctions", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Home", "label": "Home", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Users", "label": "Users", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "EditShop", "label": "EditShop", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "StripeConnect", "label": "StripeConnect", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "EditProfile", "label": "EditProfile", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "ShopOrders", "label": "ShopOrders", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Auction", "label": "Auction", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "MyShops", "label": "MyShops", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "PrivateRoute", "label": "PrivateRoute", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Shop", "label": "Shop", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Shops", "label": "Shops", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Menu", "label": "Menu", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "EditAuction", "label": "EditAuction", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "EditProduct", "label": "EditProduct", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "theme.js", "label": "theme.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\theme.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "api-auction.js", "label": "api-auction.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\auction\\api-auction.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bidding.js", "label": "Bidding.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\auction\\Bidding.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "TextField", "label": "TextField", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "socket", "label": "socket", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Grid", "label": "Grid", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "auth-helper", "label": "auth-helper", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Button", "label": "Button", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Typography", "label": "Typography", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "DeleteAuction.js", "label": "DeleteAuction.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\auction\\DeleteAuction.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "DialogContentText", "label": "DialogContentText", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "DialogActions", "label": "DialogActions", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "DialogTitle", "label": "DialogTitle", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Delete", "label": "Delete", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "prop-types", "label": "prop-types", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "DialogContent", "label": "DialogContent", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Dialog", "label": "Dialog", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "IconButton", "label": "IconButton", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "EditAuction.js", "label": "EditAuction.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\auction\\EditAuction.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Icon", "label": "Icon", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "CardActions", "label": "CardActions", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Card", "label": "Card", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "CardContent", "label": "CardContent", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Avatar", "label": "Avatar", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "AddPhotoAlternate", "label": "AddPhotoAlternate", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MyAuctions.js", "label": "MyAuctions.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\auction\\MyAuctions.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Paper", "label": "Paper", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Auctions", "label": "Auctions", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "NewAuction.js", "label": "NewAuction.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\auction\\NewAuction.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "OpenAuctions.js", "label": "OpenAuctions.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\auction\\OpenAuctions.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Timer.js", "label": "Timer.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\auction\\Timer.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "api-auth.js", "label": "api-auth.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\auth\\api-auth.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "auth-helper.js", "label": "auth-helper.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\auth\\auth-helper.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "PrivateRoute.js", "label": "PrivateRoute.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\auth\\PrivateRoute.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Signin.js", "label": "Signin.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\auth\\Signin.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "AddToCart.js", "label": "AddToCart.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\cart\\AddToCart.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "RemoveShoppingCart", "label": "RemoveShoppingCart", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "AddShoppingCart", "label": "AddShoppingCart", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "cart-helper", "label": "cart-helper", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "cart-helper.js", "label": "cart-helper.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\cart\\cart-helper.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Cart.js", "label": "Cart.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\cart\\Cart.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "config", "label": "config", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "CartItems", "label": "CartItems", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Checkout", "label": "Checkout", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CartItems.js", "label": "CartItems.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\cart\\CartItems.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Divider", "label": "Divider", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "CardMedia", "label": "CardMedia", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Checkout.js", "label": "Checkout.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\cart\\Checkout.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "PlaceOrder", "label": "PlaceOrder", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "PlaceOrder.js", "label": "PlaceOrder.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\cart\\PlaceOrder.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Home.js", "label": "Home.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\core\\Home.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Categories", "label": "Categories", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Search", "label": "Search", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Suggestions", "label": "Suggestions", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "api-order.js", "label": "api-order.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\order\\api-order.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MyOrders.js", "label": "MyOrders.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\order\\MyOrders.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "ListItemText", "label": "ListItemText", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "List", "label": "List", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "ListItem", "label": "ListItem", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Order.js", "label": "Order.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\order\\Order.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ProductOrderEdit.js", "label": "ProductOrderEdit.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\order\\ProductOrderEdit.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "MenuItem", "label": "MenuItem", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ShopOrders.js", "label": "ShopOrders.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\order\\ShopOrders.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Collapse", "label": "Collapse", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "ProductOrderEdit", "label": "ProductOrderEdit", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "ExpandLess", "label": "ExpandLess", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "ExpandMore", "label": "ExpandMore", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "api-product.js", "label": "api-product.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\product\\api-product.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "query-string", "label": "query-string", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Categories.js", "label": "Categories.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\product\\Categories.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "GridListTile", "label": "GridListTile", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "GridList", "label": "GridList", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Products", "label": "Products", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "DeleteProduct.js", "label": "DeleteProduct.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\product\\DeleteProduct.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "EditProduct.js", "label": "EditProduct.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\product\\EditProduct.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MyProducts.js", "label": "MyProducts.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\product\\MyProducts.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Edit", "label": "Edit", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "DeleteProduct", "label": "DeleteProduct", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "ListItemSecondaryAction", "label": "ListItemSecondaryAction", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "NewProduct.js", "label": "NewProduct.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\product\\NewProduct.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Product.js", "label": "Product.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\product\\Product.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "AddToCart", "label": "AddToCart", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "CardHeader", "label": "CardHeader", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Products.js", "label": "Products.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\product\\Products.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "GridListTileBar", "label": "GridListTileBar", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Search.js", "label": "Search.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\product\\Search.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Suggestions.js", "label": "Suggestions.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\product\\Suggestions.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Visibility", "label": "Visibility", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "api-shop.js", "label": "api-shop.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\shop\\api-shop.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "DeleteShop.js", "label": "DeleteShop.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\shop\\DeleteShop.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "EditShop.js", "label": "EditShop.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\shop\\EditShop.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "MyProducts", "label": "MyProducts", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MyShops.js", "label": "MyShops.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\shop\\MyShops.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "DeleteShop", "label": "DeleteShop", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "ListItemAvatar", "label": "ListItemAvatar", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "NewShop.js", "label": "NewShop.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\shop\\NewShop.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Shop.js", "label": "Shop.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\shop\\Shop.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Shops.js", "label": "Shops.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\shop\\Shops.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "api-user.js", "label": "api-user.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\user\\api-user.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "DeleteUser.js", "label": "DeleteUser.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\user\\DeleteUser.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "EditProfile.js", "label": "EditProfile.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\user\\EditProfile.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "FormControlLabel", "label": "FormControlLabel", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Switch", "label": "Switch", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Profile.js", "label": "Profile.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\user\\Profile.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "Person", "label": "Person", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "DeleteUser", "label": "DeleteUser", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "MyOrders", "label": "MyOrders", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "stripeButton", "label": "stripeButton", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Signup.js", "label": "Signup.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\user\\Signup.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "StripeConnect.js", "label": "StripeConnect.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\user\\StripeConnect.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Users.js", "label": "Users.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\client\\user\\Users.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "ArrowForward", "label": "ArrowForward", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "config.js", "label": "config.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\config\\config.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "devBundle.js", "label": "devBundle.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\devBundle.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "webpack-hot-middleware", "label": "webpack-hot-middleware", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "webpack-dev-middleware", "label": "webpack-dev-middleware", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "webpack.config.client", "label": "webpack.config.client", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "express.js", "label": "express.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\express.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "user", "label": "user", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "server", "label": "server", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "template", "label": "template", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "express", "label": "express", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "cors", "label": "cors", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "product", "label": "product", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "devBundle", "label": "devBundle", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "auction", "label": "auction", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "shop", "label": "shop", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "auth", "label": "auth", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "body-parser", "label": "body-parser", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "order", "label": "order", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "helmet", "label": "helmet", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "cookie-parser", "label": "cookie-parser", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "compression", "label": "compression", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "server.js", "label": "server.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\server.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "bidding", "label": "bidding", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "mongoose", "label": "mongoose", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "auction.controller.js", "label": "auction.controller.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\controllers\\auction.controller.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "formidable", "label": "formidable", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "dbErrorHandler", "label": "dbErrorHandler", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "fs", "label": "fs", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "default", "label": "default", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "extend", "label": "extend", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "auth.controller.js", "label": "auth.controller.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\controllers\\auth.controller.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "jsonwebtoken", "label": "jsonwebtoken", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "express-jwt", "label": "express-jwt", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "bidding.controller.js", "label": "bidding.controller.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\controllers\\bidding.controller.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "order.controller.js", "label": "order.controller.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\controllers\\order.controller.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "product.controller.js", "label": "product.controller.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\controllers\\product.controller.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "shop.controller.js", "label": "shop.controller.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\controllers\\shop.controller.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "user.controller.js", "label": "user.controller.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\controllers\\user.controller.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "stripe", "label": "stripe", "shape": "dot"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "request", "label": "request", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "dbErrorHandler.js", "label": "dbErrorHandler.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\helpers\\dbErrorHandler.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "auction.model.js", "label": "auction.model.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\models\\auction.model.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "order.model.js", "label": "order.model.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\models\\order.model.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "product.model.js", "label": "product.model.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\models\\product.model.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "shop.model.js", "label": "shop.model.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\models\\shop.model.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "user.model.js", "label": "user.model.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\models\\user.model.js"}, {"border": "highlight", "color": "#97c2fc", "font": {"color": "white"}, "id": "crypto", "label": "crypto", "shape": "dot"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "auction.routes.js", "label": "auction.routes.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\routes\\auction.routes.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "auth.routes.js", "label": "auth.routes.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\routes\\auth.routes.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "order.routes.js", "label": "order.routes.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\routes\\order.routes.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "product.routes.js", "label": "product.routes.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\routes\\product.routes.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "shop.routes.js", "label": "shop.routes.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\routes\\shop.routes.js"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "user.routes.js", "label": "user.routes.js", "shape": "dot", "title": "/Users/apgur/Desktop/project-tool/mern-marketplace\\server\\routes\\user.routes.js"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "path", "title": "edge", "to": "webpack.config.client.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "webpack", "title": "edge", "to": "webpack.config.client.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "path", "title": "edge", "to": "webpack.config.client.production.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "webpack-node-externals", "title": "edge", "to": "webpack.config.server.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "path", "title": "edge", "to": "webpack.config.server.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "MainRouter", "title": "edge", "to": "App.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "theme", "title": "edge", "to": "App.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "App.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "App", "title": "edge", "to": "main.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "main.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Product", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Profile", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "NewProduct", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "OpenAuctions", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "NewShop", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Order", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Signup", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "NewAuction", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Signin", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Cart", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "MyAuctions", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Home", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Users", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "EditShop", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "StripeConnect", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "EditProfile", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ShopOrders", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Auction", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "MyShops", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "PrivateRoute", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Shop", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Shops", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Menu", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "EditAuction", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "EditProduct", "title": "edge", "to": "MainRouter.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "TextField", "title": "edge", "to": "Bidding.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "socket", "title": "edge", "to": "Bidding.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Grid", "title": "edge", "to": "Bidding.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "Bidding.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Bidding.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "Bidding.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "Bidding.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogContentText", "title": "edge", "to": "DeleteAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogActions", "title": "edge", "to": "DeleteAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogTitle", "title": "edge", "to": "DeleteAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Delete", "title": "edge", "to": "DeleteAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "prop-types", "title": "edge", "to": "DeleteAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "DeleteAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogContent", "title": "edge", "to": "DeleteAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "DeleteAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Dialog", "title": "edge", "to": "DeleteAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "DeleteAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "IconButton", "title": "edge", "to": "DeleteAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "EditAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardActions", "title": "edge", "to": "EditAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "EditAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "TextField", "title": "edge", "to": "EditAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardContent", "title": "edge", "to": "EditAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Avatar", "title": "edge", "to": "EditAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "EditAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "EditAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "AddPhotoAlternate", "title": "edge", "to": "EditAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "EditAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "EditAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "MyAuctions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Paper", "title": "edge", "to": "MyAuctions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "MyAuctions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Auctions", "title": "edge", "to": "MyAuctions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "MyAuctions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "MyAuctions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "MyAuctions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "NewAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardActions", "title": "edge", "to": "NewAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "NewAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "TextField", "title": "edge", "to": "NewAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardContent", "title": "edge", "to": "NewAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "NewAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "NewAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "AddPhotoAlternate", "title": "edge", "to": "NewAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "NewAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "NewAuction.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Paper", "title": "edge", "to": "OpenAuctions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Auctions", "title": "edge", "to": "OpenAuctions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "OpenAuctions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "OpenAuctions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Timer.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "Timer.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "PrivateRoute.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "PrivateRoute.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "Signin.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardActions", "title": "edge", "to": "Signin.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "Signin.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "TextField", "title": "edge", "to": "Signin.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardContent", "title": "edge", "to": "Signin.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "Signin.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Signin.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "Signin.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "Signin.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "RemoveShoppingCart", "title": "edge", "to": "AddToCart.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "AddShoppingCart", "title": "edge", "to": "AddToCart.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "cart-helper", "title": "edge", "to": "AddToCart.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "prop-types", "title": "edge", "to": "AddToCart.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "AddToCart.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "IconButton", "title": "edge", "to": "AddToCart.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "config", "title": "edge", "to": "Cart.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Grid", "title": "edge", "to": "Cart.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CartItems", "title": "edge", "to": "Cart.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Cart.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Checkout", "title": "edge", "to": "Cart.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "CartItems.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "TextField", "title": "edge", "to": "CartItems.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardContent", "title": "edge", "to": "CartItems.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "CartItems.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Divider", "title": "edge", "to": "CartItems.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "cart-helper", "title": "edge", "to": "CartItems.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardMedia", "title": "edge", "to": "CartItems.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "prop-types", "title": "edge", "to": "CartItems.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "CartItems.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "CartItems.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "CartItems.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "Checkout.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "PlaceOrder", "title": "edge", "to": "Checkout.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "TextField", "title": "edge", "to": "Checkout.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "Checkout.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "Checkout.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "cart-helper", "title": "edge", "to": "Checkout.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Checkout.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "Checkout.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "PlaceOrder.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "PlaceOrder.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "cart-helper", "title": "edge", "to": "PlaceOrder.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "prop-types", "title": "edge", "to": "PlaceOrder.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "PlaceOrder.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "PlaceOrder.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "PlaceOrder.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Categories", "title": "edge", "to": "Home.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Search", "title": "edge", "to": "Home.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Suggestions", "title": "edge", "to": "Home.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Grid", "title": "edge", "to": "Home.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Home.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "MyOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Paper", "title": "edge", "to": "MyOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "MyOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Divider", "title": "edge", "to": "MyOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "MyOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItemText", "title": "edge", "to": "MyOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "List", "title": "edge", "to": "MyOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItem", "title": "edge", "to": "MyOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "Order.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardContent", "title": "edge", "to": "Order.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Divider", "title": "edge", "to": "Order.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Grid", "title": "edge", "to": "Order.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardMedia", "title": "edge", "to": "Order.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Order.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "Order.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "ProductOrderEdit.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "TextField", "title": "edge", "to": "ProductOrderEdit.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "ProductOrderEdit.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Divider", "title": "edge", "to": "ProductOrderEdit.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "MenuItem", "title": "edge", "to": "ProductOrderEdit.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "prop-types", "title": "edge", "to": "ProductOrderEdit.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "ProductOrderEdit.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItemText", "title": "edge", "to": "ProductOrderEdit.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "List", "title": "edge", "to": "ProductOrderEdit.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItem", "title": "edge", "to": "ProductOrderEdit.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "ShopOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Paper", "title": "edge", "to": "ShopOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "ShopOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Divider", "title": "edge", "to": "ShopOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Collapse", "title": "edge", "to": "ShopOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ProductOrderEdit", "title": "edge", "to": "ShopOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "ShopOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ExpandLess", "title": "edge", "to": "ShopOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItemText", "title": "edge", "to": "ShopOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "List", "title": "edge", "to": "ShopOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ExpandMore", "title": "edge", "to": "ShopOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItem", "title": "edge", "to": "ShopOrders.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "query-string", "title": "edge", "to": "api-product.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "Categories.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "GridListTile", "title": "edge", "to": "Categories.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "Categories.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Divider", "title": "edge", "to": "Categories.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "prop-types", "title": "edge", "to": "Categories.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Categories.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "GridList", "title": "edge", "to": "Categories.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Products", "title": "edge", "to": "Categories.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "Categories.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogContentText", "title": "edge", "to": "DeleteProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogActions", "title": "edge", "to": "DeleteProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogTitle", "title": "edge", "to": "DeleteProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "DeleteProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Delete", "title": "edge", "to": "DeleteProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "prop-types", "title": "edge", "to": "DeleteProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogContent", "title": "edge", "to": "DeleteProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "DeleteProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Dialog", "title": "edge", "to": "DeleteProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "DeleteProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "IconButton", "title": "edge", "to": "DeleteProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "EditProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardActions", "title": "edge", "to": "EditProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "EditProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "TextField", "title": "edge", "to": "EditProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardContent", "title": "edge", "to": "EditProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Avatar", "title": "edge", "to": "EditProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "EditProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "EditProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "AddPhotoAlternate", "title": "edge", "to": "EditProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "EditProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "EditProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Edit", "title": "edge", "to": "MyProducts.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "MyProducts.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "MyProducts.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "MyProducts.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DeleteProduct", "title": "edge", "to": "MyProducts.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItemSecondaryAction", "title": "edge", "to": "MyProducts.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Divider", "title": "edge", "to": "MyProducts.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardMedia", "title": "edge", "to": "MyProducts.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "prop-types", "title": "edge", "to": "MyProducts.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "MyProducts.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "MyProducts.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "List", "title": "edge", "to": "MyProducts.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "IconButton", "title": "edge", "to": "MyProducts.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItem", "title": "edge", "to": "MyProducts.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "NewProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardActions", "title": "edge", "to": "NewProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "NewProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "TextField", "title": "edge", "to": "NewProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardContent", "title": "edge", "to": "NewProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "NewProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "NewProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "AddPhotoAlternate", "title": "edge", "to": "NewProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "NewProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "NewProduct.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "Product.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "Product.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "AddToCart", "title": "edge", "to": "Product.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Suggestions", "title": "edge", "to": "Product.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Grid", "title": "edge", "to": "Product.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardMedia", "title": "edge", "to": "Product.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Product.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardHeader", "title": "edge", "to": "Product.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "Product.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "GridListTile", "title": "edge", "to": "Products.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "AddToCart", "title": "edge", "to": "Products.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "GridListTileBar", "title": "edge", "to": "Products.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "prop-types", "title": "edge", "to": "Products.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Products.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "GridList", "title": "edge", "to": "Products.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "Products.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "Search.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "TextField", "title": "edge", "to": "Search.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Search", "title": "edge", "to": "Search.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Divider", "title": "edge", "to": "Search.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "MenuItem", "title": "edge", "to": "Search.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "prop-types", "title": "edge", "to": "Search.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Products", "title": "edge", "to": "Search.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Search.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "Search.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "Suggestions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "Suggestions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "AddToCart", "title": "edge", "to": "Suggestions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Paper", "title": "edge", "to": "Suggestions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardContent", "title": "edge", "to": "Suggestions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Divider", "title": "edge", "to": "Suggestions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Visibility", "title": "edge", "to": "Suggestions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardMedia", "title": "edge", "to": "Suggestions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "prop-types", "title": "edge", "to": "Suggestions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Suggestions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "IconButton", "title": "edge", "to": "Suggestions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "Suggestions.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogContentText", "title": "edge", "to": "DeleteShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogActions", "title": "edge", "to": "DeleteShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogTitle", "title": "edge", "to": "DeleteShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "DeleteShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Delete", "title": "edge", "to": "DeleteShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "prop-types", "title": "edge", "to": "DeleteShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogContent", "title": "edge", "to": "DeleteShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "DeleteShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Dialog", "title": "edge", "to": "DeleteShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "DeleteShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "IconButton", "title": "edge", "to": "DeleteShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "MyProducts", "title": "edge", "to": "EditShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "EditShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardActions", "title": "edge", "to": "EditShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "EditShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "TextField", "title": "edge", "to": "EditShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardContent", "title": "edge", "to": "EditShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Avatar", "title": "edge", "to": "EditShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "EditShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Grid", "title": "edge", "to": "EditShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "EditShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "AddPhotoAlternate", "title": "edge", "to": "EditShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "EditShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "EditShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Edit", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DeleteShop", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Paper", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Avatar", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItemAvatar", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItemSecondaryAction", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Divider", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItemText", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "List", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "IconButton", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItem", "title": "edge", "to": "MyShops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "NewShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardActions", "title": "edge", "to": "NewShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "NewShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "TextField", "title": "edge", "to": "NewShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardContent", "title": "edge", "to": "NewShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "NewShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "NewShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "AddPhotoAlternate", "title": "edge", "to": "NewShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "NewShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "NewShop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Products", "title": "edge", "to": "Shop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "Shop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardContent", "title": "edge", "to": "Shop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Avatar", "title": "edge", "to": "Shop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Grid", "title": "edge", "to": "Shop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Shop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "Shop.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "Shops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Paper", "title": "edge", "to": "Shops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Avatar", "title": "edge", "to": "Shops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItemAvatar", "title": "edge", "to": "Shops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Divider", "title": "edge", "to": "Shops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Shops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "List", "title": "edge", "to": "Shops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItem", "title": "edge", "to": "Shops.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogContentText", "title": "edge", "to": "DeleteUser.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogActions", "title": "edge", "to": "DeleteUser.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogTitle", "title": "edge", "to": "DeleteUser.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "DeleteUser.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Delete", "title": "edge", "to": "DeleteUser.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "prop-types", "title": "edge", "to": "DeleteUser.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogContent", "title": "edge", "to": "DeleteUser.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "DeleteUser.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Dialog", "title": "edge", "to": "DeleteUser.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "DeleteUser.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "IconButton", "title": "edge", "to": "DeleteUser.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "EditProfile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardActions", "title": "edge", "to": "EditProfile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "EditProfile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "TextField", "title": "edge", "to": "EditProfile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardContent", "title": "edge", "to": "EditProfile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "EditProfile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "EditProfile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "EditProfile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "FormControlLabel", "title": "edge", "to": "EditProfile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Switch", "title": "edge", "to": "EditProfile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "EditProfile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Person", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Edit", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Auctions", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItemAvatar", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItem", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DeleteUser", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "MyOrders", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "List", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Paper", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Divider", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItemText", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "config", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Avatar", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItemSecondaryAction", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "stripeButton", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "IconButton", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "Profile.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Icon", "title": "edge", "to": "Signup.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogContentText", "title": "edge", "to": "Signup.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardActions", "title": "edge", "to": "Signup.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Card", "title": "edge", "to": "Signup.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "TextField", "title": "edge", "to": "Signup.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogActions", "title": "edge", "to": "Signup.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "CardContent", "title": "edge", "to": "Signup.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogTitle", "title": "edge", "to": "Signup.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "DialogContent", "title": "edge", "to": "Signup.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Signup.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Dialog", "title": "edge", "to": "Signup.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Button", "title": "edge", "to": "Signup.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "Signup.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Paper", "title": "edge", "to": "StripeConnect.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth-helper", "title": "edge", "to": "StripeConnect.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "query-string", "title": "edge", "to": "StripeConnect.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "StripeConnect.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "StripeConnect.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Typography", "title": "edge", "to": "Users.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Paper", "title": "edge", "to": "Users.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Avatar", "title": "edge", "to": "Users.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "Person", "title": "edge", "to": "Users.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItemAvatar", "title": "edge", "to": "Users.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItemSecondaryAction", "title": "edge", "to": "Users.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ArrowForward", "title": "edge", "to": "Users.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "Users.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItemText", "title": "edge", "to": "Users.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "List", "title": "edge", "to": "Users.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "IconButton", "title": "edge", "to": "Users.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "ListItem", "title": "edge", "to": "Users.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "webpack-hot-middleware", "title": "edge", "to": "devBundle.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "config", "title": "edge", "to": "devBundle.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "webpack-dev-middleware", "title": "edge", "to": "devBundle.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "webpack", "title": "edge", "to": "devBundle.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "webpack.config.client", "title": "edge", "to": "devBundle.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "user", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "server", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "template", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "express", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "cors", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "path", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "product", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "devBundle", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auction", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "shop", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "body-parser", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "order", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "theme", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "MainRouter", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "helmet", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "cookie-parser", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "compression", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "react", "title": "edge", "to": "express.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "bidding", "title": "edge", "to": "server.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "express", "title": "edge", "to": "server.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "mongoose", "title": "edge", "to": "server.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "config", "title": "edge", "to": "server.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "formidable", "title": "edge", "to": "auction.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "dbErrorHandler", "title": "edge", "to": "auction.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "fs", "title": "edge", "to": "auction.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "default", "title": "edge", "to": "auction.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auction", "title": "edge", "to": "auction.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "extend", "title": "edge", "to": "auction.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "user", "title": "edge", "to": "auth.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "jsonwebtoken", "title": "edge", "to": "auth.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "express-jwt", "title": "edge", "to": "auth.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "config", "title": "edge", "to": "auth.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auction", "title": "edge", "to": "bidding.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "dbErrorHandler", "title": "edge", "to": "order.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "dbErrorHandler", "title": "edge", "to": "product.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "product", "title": "edge", "to": "product.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "formidable", "title": "edge", "to": "product.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "fs", "title": "edge", "to": "product.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "default", "title": "edge", "to": "product.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "extend", "title": "edge", "to": "product.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "shop", "title": "edge", "to": "shop.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "dbErrorHandler", "title": "edge", "to": "shop.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "formidable", "title": "edge", "to": "shop.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "fs", "title": "edge", "to": "shop.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "default", "title": "edge", "to": "shop.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "extend", "title": "edge", "to": "shop.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "user", "title": "edge", "to": "user.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "config", "title": "edge", "to": "user.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "dbErrorHandler", "title": "edge", "to": "user.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "stripe", "title": "edge", "to": "user.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "request", "title": "edge", "to": "user.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "extend", "title": "edge", "to": "user.controller.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "mongoose", "title": "edge", "to": "auction.model.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "mongoose", "title": "edge", "to": "order.model.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "mongoose", "title": "edge", "to": "product.model.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "mongoose", "title": "edge", "to": "shop.model.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "crypto", "title": "edge", "to": "user.model.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "mongoose", "title": "edge", "to": "user.model.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth", "title": "edge", "to": "auction.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "user", "title": "edge", "to": "auction.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "express", "title": "edge", "to": "auction.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auction", "title": "edge", "to": "auction.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth", "title": "edge", "to": "auth.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "express", "title": "edge", "to": "auth.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth", "title": "edge", "to": "order.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "shop", "title": "edge", "to": "order.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "order", "title": "edge", "to": "order.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "product", "title": "edge", "to": "order.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "express", "title": "edge", "to": "order.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "user", "title": "edge", "to": "order.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth", "title": "edge", "to": "product.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "product", "title": "edge", "to": "product.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "express", "title": "edge", "to": "product.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "shop", "title": "edge", "to": "product.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth", "title": "edge", "to": "shop.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "user", "title": "edge", "to": "shop.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "express", "title": "edge", "to": "shop.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "shop", "title": "edge", "to": "shop.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "auth", "title": "edge", "to": "user.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "user", "title": "edge", "to": "user.routes.js", "weight": 10}, {"arrows": "to", "arrowsize": 0.1, "color": "white", "from": "express", "title": "edge", "to": "user.routes.js", "weight": 10}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
